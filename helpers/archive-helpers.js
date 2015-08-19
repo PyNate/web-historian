@@ -1,6 +1,7 @@
 var fs = require('fs');
 var path = require('path');
 var _ = require('underscore');
+var request = require('request');
 
 /*
  * You will need to reuse the same paths many times over in the course of this sprint.
@@ -29,10 +30,7 @@ exports.readListOfUrls = function(callback){
   fs.readFile(exports.paths.list, function(err,data){
 
     var sites = data.toString().split('\n');
-    for(var i = 0; i < sites.length-1; i++){
-      console.log(sites[i]);
-      callback(sites[i]);
-    }
+    callback(sites);
 
     if(err){
       throw err;
@@ -42,20 +40,31 @@ exports.readListOfUrls = function(callback){
 };
 
 exports.isUrlInList = function(url, cb){
-  exports.readListOfUrls(function(site){
-    if(url === site){
-      cb(site);
-    }
+  exports.readListOfUrls(function(sites){
+    cb(sites.indexOf(url) > -1 );
   });
 };
 
-exports.addUrlToList = function(){
+exports.addUrlToList = function(url){
+  exports.readListOfUrls(function(sites){
+    if(sites.indexOf(url) < 0){
+      sites.pop();
+      sites.push(url);
+      var data = sites.join('\n');
+      fs.writeFile(exports.paths.list, data, function(err){});
+    }
+  })
 };
 
-exports.isUrlArchived = function(){
+exports.isUrlArchived = function(url, cb){
+  fs.exists(exports.paths.archivedSites + '/' + url, cb)
 };
 
-exports.downloadUrls = function(){
+exports.downloadUrls = function(sites){
+  for(var i = 0; i < sites.length; i++){
+    console.log("Site: http://" + sites[i]);
+    request('http://' + sites[i])
+      .pipe(fs.createWriteStream(exports.paths.archivedSites + '/' + sites[i]))
+  }
 };
 
-exports.isUrlInList('example1.com', function(site) {console.log("found " + site)})
